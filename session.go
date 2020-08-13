@@ -1,6 +1,12 @@
 package main
 
 import (
+	//	"fmt"
+	//"os"
+
+	"fmt"
+	"os"
+
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
@@ -8,6 +14,7 @@ import (
 
 var contextKeySession = "webauthn-demo-session"
 
+// SessionMiddleware manages session
 func SessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		sess, _ := session.Get("session", c)
@@ -19,7 +26,9 @@ func SessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 		c.Set(contextKeySession, sess)
 
 		c.Response().Before(func() {
-			sess.Save(c.Request(), c.Response())
+			if err := sess.Save(c.Request(), c.Response()); err != nil {
+				fmt.Fprintf(os.Stderr, "failed to save session: %v", err)
+			}
 		})
 
 		err := next(c)
@@ -30,6 +39,7 @@ func SessionMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
+// SessionFromContext manages session
 func SessionFromContext(c echo.Context) *sessions.Session {
 	sess, ok := c.Get(contextKeySession).(*sessions.Session)
 	if !ok {

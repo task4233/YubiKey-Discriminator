@@ -1,6 +1,6 @@
-module github.com/koesie10/webauthn-demo
+module github.com/task4233/webauthn-demo
 
-go 1.13
+go 1.15
 
 require (
 	github.com/gorilla/sessions v1.2.0

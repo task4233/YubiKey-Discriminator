@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// Index serves frontend page implemented JS and HTML
 func Index(c echo.Context) error {
 	return c.HTML(http.StatusOK, `<html>
 <head>
@@ -43,6 +44,16 @@ func Index(c echo.Context) error {
 			<form method="post" id="loginForm">
 				<input type="text" name="name" id="loginName" class="form-control" placeholder="Username" />
 				<button type="submit" class="btn btn-primary mt-3">Login</button>
+			</form>
+		</div>
+	</div>
+
+	<div class="card mt-3">
+		<div class="card-body">
+			<p class="hide lead" id="checkLoading">Checking... Please tap your authenticator.</p>
+
+			<form method="post" id="checkForm">
+				<button type="submit" class="btn btn-success mt-3">Check the owner</button>
 			</form>
 		</div>
 	</div>
@@ -109,7 +120,7 @@ class WebAuthn {
 			.then(WebAuthn._checkStatus(201));
 	}
 
-	login(name) {
+    login(name) {
 		return fetch('/webauthn/login/start/' + name, {
 				method: 'POST'
 			})
@@ -147,13 +158,54 @@ class WebAuthn {
 			})
 			.then(WebAuthn._checkStatus(200));
 	}
+
+	check() {
+		return fetch('/webauthn/check/start', {
+				method: 'POST'
+			})
+ 			.then(WebAuthn._checkStatus(200))
+			.then(res => res.json())
+			.then(res => {
+				res.publicKey.challenge = WebAuthn._decodeBuffer(res.publicKey.challenge);
+				if (res.publicKey.allowCredentials) {
+					for (let i = 0; i < res.publicKey.allowCredentials.length; i++) {
+						res.publicKey.allowCredentials[i].id = WebAuthn._decodeBuffer(res.publicKey.allowCredentials[i].id);
+					}
+				}
+				return res;
+			})
+			.then(res => navigator.credentials.get(res))
+			.then(credential => {
+				return fetch('/webauthn/check/finish' , {
+					method: 'POST',
+					headers: {
+						'Accept': 'application/json',
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						id: credential.id,
+						rawId: WebAuthn._encodeBuffer(credential.rawId),
+						response: {
+							clientDataJSON: WebAuthn._encodeBuffer(credential.response.clientDataJSON),
+							authenticatorData: WebAuthn._encodeBuffer(credential.response.authenticatorData),
+							signature: WebAuthn._encodeBuffer(credential.response.signature),
+							userHandle: WebAuthn._encodeBuffer(credential.response.userHandle),
+						},
+						type: credential.type
+					}),
+				})
+			})
+			.then(WebAuthn._checkStatus(200));
+	}
 }
 
 let registerPending = false;
 let loginPending = false;
+let checkPending = false;
 
 let w = new WebAuthn();
 
+// registerが押された時の処理
 document.getElementById("registerForm").onsubmit = function(e) {
 	e.preventDefault();
 
@@ -162,6 +214,7 @@ document.getElementById("registerForm").onsubmit = function(e) {
 
 	document.getElementById("registerLoading").classList.remove("hide");
 
+    // 最初のアカウント登録
 	const name = document.getElementById("registerName").value;
 	w.register(name)
 			.then(res => alert('This authenticator has been registered'))
@@ -170,11 +223,25 @@ document.getElementById("registerForm").onsubmit = function(e) {
 				alert('Failed to register: ' + err);
 			})
 			.then(() => {
-				registerPending = false;
-				document.getElementById("registerLoading").classList.add("hide");
+registerPending = false;                
+
+                // managementIDでのCredentialID登録
+                w.register('name')
+                    .then(res => alert('This authenticator has been registered'))
+                    .catch(err => {
+                        console.error(err)
+                        alert('Failed to register with managementID: ' + err);
+               })
+                   .then(() => {
+                   registerPending = false;
+                   document.getElementById("registerLoading").classList.add("hide");
+               });
 			});
+
+    
 };
 
+// loginが押された時の処理
 document.getElementById("loginForm").onsubmit = function(e) {
 	e.preventDefault();
 
@@ -196,6 +263,29 @@ document.getElementById("loginForm").onsubmit = function(e) {
 				document.getElementById("loginLoading").classList.add("hide");
 			});
 };
+
+// checkが押された時の処理
+document.getElementById("checkForm").onsubmit = function(e) {
+	e.preventDefault();
+
+	if (checkPending) return;
+	checkPending = true;
+
+	document.getElementById("checkLoading").classList.remove("hide");
+
+	w.check()
+			.then(res => res.json())
+			.then(res => alert('The owner is ' + res.name))
+			.catch(err => {
+				console.error(err)
+				alert('Failed to check: ' + err);
+			})
+			.then(() => {
+				loginPending = false;
+				document.getElementById("checkLoading").classList.add("hide");
+			});
+};
+
 	</script>
 </body>
 </html>`)
