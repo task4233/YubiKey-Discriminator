@@ -253,7 +253,7 @@ func main() {
 		}
 	}()
 
-	// shutdown ther server with a timeout of 5 seconds
+	// shutdown the server with a timeout of 5 seconds
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
