@@ -113,7 +113,7 @@ func (wCtrl *WebAuthnCtr) RegistrationStartHandler(c echo.Context) error {
 	}
 
 	sess := SessionFromContext(c)
-    wCtrl.W.StartRegistration(c.Request(), c.Response(), u, webauthn.WrapMap(sess.Values))
+	wCtrl.W.StartRegistration(c.Request(), c.Response(), u, webauthn.WrapMap(sess.Values))
 	return nil
 }
 
