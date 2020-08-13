@@ -1,6 +1,6 @@
 # webauthn-demo
 Serial Numberを持たないYubiKeyでも、登録したYubiKeyのみで所有者を特定できる機能を追加したデモサーバ。
-[webauthn-demo](https://github.com/koesie10/webauthn-demo)をベースに作成。
+[koesie10 / webauthn-demo](https://github.com/koesie10/webauthn-demo)をベースに作成。
 
 ## Usage
 
